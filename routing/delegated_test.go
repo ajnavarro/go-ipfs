@@ -15,12 +15,12 @@ import (
 
 func TestPriority(t *testing.T) {
 	require := require.New(t)
-	params := make(map[string]string)
+	params := make(config.RouterParams)
 	p := GetPriority(params)
 
 	require.Equal(defaultPriority, p)
 
-	params[string(config.RouterParamPriority)] = "101"
+	params[string(config.RouterParamPriority)] = 101
 
 	p = GetPriority(params)
 
@@ -33,27 +33,20 @@ func TestPriority(t *testing.T) {
 	require.Equal(defaultPriority, p)
 }
 
-func TestRoutingFromConfig(t *testing.T) {
+func TestReframeRoutingFromConfig(t *testing.T) {
 	require := require.New(t)
 
-	r, err := RoutingFromConfig(config.Router{
-		Type: "unknown",
-	})
-
-	require.Nil(r)
-	require.EqualError(err, "router type unknown is not supported")
-
-	r, err = RoutingFromConfig(config.Router{
-		Type:       string(config.RouterTypeReframe),
-		Parameters: make(map[string]string),
+	r, err := ReframeRoutingFromConfig(config.Router{
+		Type:       config.RouterTypeReframe,
+		Parameters: make(config.RouterParams),
 	})
 
 	require.Nil(r)
 	require.EqualError(err, "configuration param 'Endpoint' is needed for reframe delegated routing types")
 
-	r, err = RoutingFromConfig(config.Router{
-		Type: string(config.RouterTypeReframe),
-		Parameters: map[string]string{
+	r, err = ReframeRoutingFromConfig(config.Router{
+		Type: config.RouterTypeReframe,
+		Parameters: config.RouterParams{
 			string(config.RouterParamEndpoint): "test",
 		},
 	})

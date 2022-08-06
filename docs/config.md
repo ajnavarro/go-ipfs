@@ -1318,7 +1318,7 @@ It specifies the routing type that will be created.
 Currently supported types:
 
 - `reframe` (delegated routing based on the [reframe protocol](https://github.com/ipfs/specs/tree/main/reframe#readme))
-- <del>`dht`</del> (WIP, custom DHT will be added in a future release)
+- `dht` use a DHT as a routing mechanism
 
 Type: `string`
 
@@ -1338,10 +1338,18 @@ Type: `flag` (`null`/missing will apply the default)
 
 Parameters needed to create the specified router. Supported params per router type:
 
+General:
+  - `Priority` (optional): Priority is used when making a routing request. Small numbers represent more important routers. The default priority is 100000.
 Reframe:
   - `Endpoint` (mandatory): URL that will be used to connect to a specified router.
-  - `Priority` (optional): Priority is used when making a routing request. Small numbers represent more important routers. The default priority is 100000.
-
+DHT:
+  - `DHTMode` (mandatory): DHT type that will be use to create the DHT router. Possible values: 
+    - `dht`
+    - `dhtcilent`
+    - `dhtserver`
+    - `none`
+  - `TrackFullNetworkDHT` (optional): It will start an experimental DHT router that will scan the entire network. Really resources intensive. `DHTMode` will be ignored.
+  
 **Example:**
 
 To add router provided by _Store the Index_ team at [cid.contact](https://cid.contact):
@@ -1399,6 +1407,8 @@ unless you're sure your node is reachable from the public network.
 Default: `dht`
 
 Type: `optionalString` (`null`/missing means the default)
+
+**DEPRECATED:** use [`Routing.Routers`](#routingrouters) instead.
 
 ## `Swarm`
 

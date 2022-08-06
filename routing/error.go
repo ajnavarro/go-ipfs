@@ -1,13 +1,18 @@
 package routing
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/ipfs/kubo/config"
+)
 
 type ParamNeededError struct {
-	ParamName  string
+	ParamName  config.RouterParam
 	RouterType string
 }
 
-func NewParamNeededErr(param, routing string) error {
+func NewParamNeededErr(param config.RouterParam, routing string) error {
 	return &ParamNeededError{
 		ParamName:  param,
 		RouterType: routing,
@@ -24,4 +29,17 @@ type RouterTypeNotFoundError struct {
 
 func (e *RouterTypeNotFoundError) Error() string {
 	return fmt.Sprintf("router type %v is not supported", e.RouterType)
+}
+
+type InvalidValueError struct {
+	ParamName    config.RouterParam
+	InvalidValue string
+	ValidValues  []string
+}
+
+func (e *InvalidValueError) Error() string {
+	return fmt.Sprintf(
+		"value `%s` for configuration param `%s` is not valid. Valid values: %s",
+		e.InvalidValue, e.ParamName, strings.Join(e.ValidValues, ", "),
+	)
 }

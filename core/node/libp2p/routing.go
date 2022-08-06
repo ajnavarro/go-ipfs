@@ -3,6 +3,7 @@ package libp2p
 import (
 	"context"
 	"fmt"
+	"io"
 	"runtime/debug"
 	"sort"
 	"time"
@@ -64,6 +65,7 @@ type processInitialRoutingOut struct {
 
 type AddrInfoChan chan peer.AddrInfo
 
+// Deprecated: Remove when `config.Routing.Type` is replaced by `config.Routing.Routers`
 func BaseRouting(experimentalDHTClient bool) interface{} {
 	return func(lc fx.Lifecycle, in processInitialRoutingIn) (out processInitialRoutingOut, err error) {
 		var dr *ddht.DHT
@@ -136,8 +138,16 @@ type delegatedRouterOut struct {
 	ContentRouter []routing.ContentRouting `group:"content-routers,flatten"`
 }
 
-func DelegatedRouting(routers map[string]config.Router) interface{} {
-	return func() (delegatedRouterOut, error) {
+type dhtDelegatedRoutingIn struct {
+	fx.In
+
+	Host      host.Host
+	Repo      repo.Repo
+	Validator record.Validator
+}
+
+func DHTDelegatedRouting(routers []config.Router, experimentalTrackFullNetworkDHT bool) interface{} {
+	return func(mctx helpers.MetricsCtx, lc fx.Lifecycle, in dhtDelegatedRoutingIn) (delegatedRouterOut, error) {
 		out := delegatedRouterOut{}
 
 		for _, v := range routers {
@@ -145,7 +155,7 @@ func DelegatedRouting(routers map[string]config.Router) interface{} {
 				continue
 			}
 
-			r, err := irouting.RoutingFromConfig(v)
+			r, err := irouting.ReframeRoutingFromConfig(v)
 			if err != nil {
 				return out, err
 			}
@@ -153,6 +163,55 @@ func DelegatedRouting(routers map[string]config.Router) interface{} {
 			out.Routers = append(out.Routers, Router{
 				Routing:  r,
 				Priority: irouting.GetPriority(v.Parameters),
+			})
+
+			lc.Append(fx.Hook{
+				OnStop: func(ctx context.Context) error {
+					rc, ok := r.(io.Closer)
+					if !ok {
+						return nil
+					}
+
+					return rc.Close()
+				},
+			})
+
+			out.ContentRouter = append(out.ContentRouter, r)
+		}
+
+		return out, nil
+	}
+
+}
+
+func ReframeDelegatedRouting(routers []config.Router) interface{} {
+	return func(mctx helpers.MetricsCtx, lc fx.Lifecycle) (delegatedRouterOut, error) {
+		out := delegatedRouterOut{}
+
+		for _, v := range routers {
+			if !v.Enabled.WithDefault(true) {
+				continue
+			}
+
+			r, err := irouting.ReframeRoutingFromConfig(v)
+			if err != nil {
+				return out, err
+			}
+
+			out.Routers = append(out.Routers, Router{
+				Routing:  r,
+				Priority: irouting.GetPriority(v.Parameters),
+			})
+
+			lc.Append(fx.Hook{
+				OnStop: func(ctx context.Context) error {
+					rc, ok := r.(io.Closer)
+					if !ok {
+						return nil
+					}
+
+					return rc.Close()
+				},
 			})
 
 			out.ContentRouter = append(out.ContentRouter, r)
