@@ -110,7 +110,7 @@ func ResourceManager(cfg config.SwarmConfig) interface{} {
 				delegate: manager,
 			}
 			lrm.start(helpers.LifecycleCtx(mctx, lc))
-			manager = lrm
+			manager = &backpressureResourceManager{delegate: lrm}
 		} else {
 			fmt.Println("go-libp2p resource manager protection disabled")
 			manager = &network.NullResourceManager{}
